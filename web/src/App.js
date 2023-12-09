@@ -6,7 +6,7 @@ import WethABI from "./WethABI.json";
 import UsdcABI from "./UsdcABI.json";
 
 function App() {
-  let chantAndTradeContract = "0x3EB358F0c5D85B8CE9D3A2c96fd6816b0546cacB"; //zkEVM
+  let chantAndTradeContract = "0xeEcE071C18158561df902C0B0D9aa2Aac03D4Ab6"; //zkEVM
   let WETHContract = "0x34249400e31CF6C7EDE5149D5EF7be3dED2b1C4d";
   let USDCContract = "0x42241BB17d1bf31daD36B2cA376052c6368e72f5";
 
@@ -34,6 +34,8 @@ function App() {
   const [sellerAMount, setSellerAMount] = useState();
   const [sellerSP, setSellerSP] = useState();
   const [sellerCrypto, setSellerCrypto] = useState("");
+
+  const [sellersList, setSellersList] = useState([]);
 
   const [address, setAddress] = useState(null);
   const [address2, setAddress2] = useState(null);
@@ -218,6 +220,29 @@ function App() {
   //############################### Smart Contract Integration ###################################//
   //############################################################################################//
 
+  const checkApproval = async () => {
+    const signerAddress = await metamaskSigner.getAddress();
+    const maxUint = String(
+      "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+    );
+    const minimumAmount = String(ethers.utils.parseEther("1000"));
+    let approvedBalUSDC = await USDCread.allowance(
+      signerAddress,
+      chantAndTradeContract
+    );
+    if (approvedBalUSDC <= minimumAmount) {
+      await USDCWrite.approve(chantAndTradeContract, maxUint);
+    }
+
+    let approvedBalWETH = await USDCread.allowance(
+      signerAddress,
+      chantAndTradeContract
+    );
+    if (approvedBalWETH <= minimumAmount) {
+      await WETHWrite.approve(chantAndTradeContract, maxUint);
+    }
+  };
+
   const mintWETH = async (amountIn) => {
     amountIn = String(ethers.utils.parseEther(amountIn));
     const signerAddress = await metamaskSigner.getAddress();
@@ -238,6 +263,22 @@ function App() {
     sp = String(ethers.utils.parseEther(sp));
     console.log("SPppp=>", sp);
     await writeContract.listAsSeller(crypto, amount, sp);
+  };
+
+  const getSellersList = async () => {
+    const sellersArray = await contract.getAllSellers();
+    console.log("Sellers Array =>", sellersArray);
+
+    let a = sellersArray.map(async (seller) => {
+      let cryptoList = await contract.sellersListMap[seller];
+      return {
+        Seller: seller,
+        Crypto: cryptoList,
+      };
+    });
+    console.log("Sellers Array =>", sellersArray);
+    setSellersList(sellersArray);
+    return a;
   };
 
   const INR_Balance = async (addr) => {
@@ -380,6 +421,36 @@ function App() {
                   </button>
                 </form>
                 <br />
+
+                {/* <div class="col-sm">
+                  <div class="card" style={{ width: "18rem;" }}>
+                    <div class="card-body">
+                      <h5 class="card-title">Seller List</h5>
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => getSellersList()}
+                      >
+                        {" "}
+                        Get{" "}
+                      </button>
+                      {sellersList}
+                    </div>
+                  </div>
+                </div> */}
+
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Select</th>
+                      <th>Seller's Address</th>
+                      <th>Token Address</th>
+                      <th>Amount</th>
+                      <th>Selling Price</th>
+                    </tr>
+                  </thead>
+                </table>
+
                 <form className="input" onSubmit={transferUSDCToOwner}>
                   <button
                     type="button"

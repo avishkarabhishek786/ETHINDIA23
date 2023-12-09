@@ -9,8 +9,11 @@ contract ChatAndTrade {
 
     mapping (address=>bool) cryptoAllowedForTrading;
 
-    mapping (address=>mapping (address=>uint) ) buying;
-    mapping (address=>mapping (address=>uint) ) selling;
+    mapping (address=>mapping (address=>uint) ) public buying; // user addr => user crypto addr => user crypto balance  
+    mapping (address=>mapping (address=>uint) ) public selling; // user addr => user crypto addr => user crypto balance
+    address[] public sellersList;
+    mapping (address=>address[]) public sellersListMap; // seller addr => [array of selling crypto addr]
+    mapping (address=>mapping (address=>uint)) public sellingPrice; // user addr => selling crypto addr => selling crypto price
 
     modifier isCryptoAllowed(address crypto_addr) {
         require(cryptoAllowedForTrading[crypto_addr] == true, "crypto not allowed");
@@ -40,8 +43,8 @@ contract ChatAndTrade {
         uint sellAmount
     );
 
-    function depositCrypto(address crypto, uint amount, TRADE_TYPE trade_type) isCryptoAllowed(crypto) external {
-        IERC20(crypto).transferFrom(msg.sender, address(this), amount);
+    function depositCrypto(address crypto, uint amount, TRADE_TYPE trade_type) isCryptoAllowed(crypto) public  {
+        IERC20(crypto).transfer(address(this), amount);
         if(TRADE_TYPE.BUY==trade_type) {
            buying[msg.sender][crypto] += amount;
            emit Deposit(msg.sender, crypto, amount, trade_type);
@@ -51,7 +54,7 @@ contract ChatAndTrade {
         }
     }
 
-    function withdrawCrypto(address crypto, uint amount, TRADE_TYPE trade_type) isCryptoAllowed(crypto) external {
+    function withdrawCrypto(address crypto, uint amount, TRADE_TYPE trade_type) isCryptoAllowed(crypto) public {
         if(TRADE_TYPE.BUY==trade_type) { 
             require(buying[msg.sender][crypto] >= amount, "Withdrawal amount exceeded");
             buying[msg.sender][crypto] -= amount;
@@ -62,12 +65,19 @@ contract ChatAndTrade {
             selling[msg.sender][crypto] -= amount;
             IERC20(crypto).transferFrom(address(this), msg.sender, amount);
             emit Withdraw(msg.sender, crypto, amount, trade_type);
-
         }
     }
 
     function approveTradeExecByContract(address crypto) external {
         IERC20(crypto).approve(crypto, type(uint256).max);
+    }
+
+    function listAsSeller(address crypto, uint amount, uint sp) external {
+        require(amount>1 ether && IERC20(crypto).balanceOf(crypto)>=amount, "Deposit more crypto");
+        depositCrypto(crypto, amount, TRADE_TYPE.SELL);
+        sellersList.push(msg.sender);
+        sellersListMap[msg.sender].push(crypto);
+        sellingPrice[msg.sender][crypto] = sp;
     }
 
     function settle_trade(
@@ -97,6 +107,10 @@ contract ChatAndTrade {
         IERC20(sellerCrypto).transferFrom(address(this), buyer, sellAmount);
 
         emit TradeSettled(buyer, buyerCrypto, buyAmount, seller, sellerCrypto, sellAmount);
+    }
+
+    function getAllSellers() external view returns (address[] memory) {
+        return sellersList;
     }
 
     function getMessageHash(

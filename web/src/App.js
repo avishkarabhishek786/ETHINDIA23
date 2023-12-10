@@ -284,9 +284,10 @@ function App() {
         console.log("Sellers Array =>", sellersArray);
 
         let sellData = sellersArray.map(async (seller) => {
+            console.log('>>>>', await contract.sellersListMap[seller]);
             let cryptoList = await contract.sellersListMap[seller];
 
-            console.log(cryptoList);
+            console.log("cryptoList", cryptoList);
 
             return {
                 Seller: seller,
@@ -336,7 +337,7 @@ function App() {
             <div className="container">
                 <nav className="navbar navbar-light bg-light">
                     <a className="navbar-brand" href="#">
-                        Navbar
+                        Chat&Trade Dapp
                     </a>
                 </nav>
                 <h5>Approve</h5>

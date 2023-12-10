@@ -69,11 +69,11 @@ contract ChatAndTrade {
     }
 
     function approveTradeExecByContract(address crypto) external {
-        IERC20(crypto).approve(crypto, type(uint256).max);
+        IERC20(crypto).approve(address(this), type(uint256).max);
     }
 
     function listAsSeller(address crypto, uint amount, uint sp) external {
-        require(amount>1 ether && IERC20(crypto).balanceOf(crypto)>=amount, "Deposit more crypto");
+        require(amount>1 ether && IERC20(crypto).balanceOf(msg.sender)>=amount, "Deposit more crypto");
         depositCrypto(crypto, amount, TRADE_TYPE.SELL);
         sellersList.push(msg.sender);
         sellersListMap[msg.sender].push(crypto);
